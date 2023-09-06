@@ -57,6 +57,7 @@ class BLETiltScanner:
     def _reset(self):
         # Cached name and address from a successful scan.
         self._name = None
+        self._hd = None
         self._temp = None
         self._grav = None
 
@@ -89,10 +90,24 @@ class BLETiltScanner:
                 if _TILT_PINK_UUID in hexlify(adv_data):
                     self._name =  "Pink"
                 if self._name != None:
-                   #print("Found Tilt - ", hexlify(adv_data))
-                   self._grav = (adv_data[27] * 256 + adv_data[28]) / 1000
-                   self._temp = round((adv_data[25] * 256 + adv_data[26] - 32) / 1.8, 1)
-                   self._scan_callback(self._name, self._grav, self._temp)
+                    #print("Found Tilt - ", hexlify(adv_data))
+                    minor = (adv_data[27] * 256 + adv_data[28])
+                    major = (adv_data[25] * 256 + adv_data[26])
+
+                    if (minor > 5000 or minor == 1005 and major == 999 or minor == 1006 and major == 999):
+                        self._hd = True
+                    else:
+                        self._hd = False
+
+                    if self._hd == True:
+                        self._grav = minor / 10000
+                        self._temp = round(((major / 10) - 32) / 1.8, 1)
+
+                    else:
+                        self._grav = (minor) / 1000
+                        self._temp = round((major - 32) / 1.8, 1)
+
+                    self._scan_callback(self._name, self._grav, self._temp)
         elif event == _IRQ_SCAN_DONE:
             if self._scan_callback:
                 self._scan_callback = None
